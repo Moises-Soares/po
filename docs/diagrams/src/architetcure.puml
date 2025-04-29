@@ -1,0 +1,124 @@
+@startuml
+title MVC Architecture - SpotifUM with Model Layer, Storage Strategy, and View Screen Pattern
+
+package "App" {
+    class SpotifumApp {
+        + main(args: String[]): void
+    }
+}
+
+package "View" {
+    interface ViewScreen {
+        + run(): void
+    }
+
+    class SpotifumView {
+        - controller: SpotifumController
+        - currentScreen: ViewScreen
+
+        + SpotifumView(controller: SpotifumController)
+        + run(): void
+        + setScreen(screen: ViewScreen): void
+    }
+
+    class MainMenuScreen
+    class CreateUserScreen
+    class CreateAlbumScreen
+    class CreatePlaylistScreen
+    class PlaySongScreen
+    class ListUsersScreen
+
+    ViewScreen <|.. MainMenuScreen
+    ViewScreen <|.. CreateUserScreen
+    ViewScreen <|.. CreateAlbumScreen
+    ViewScreen <|.. CreatePlaylistScreen
+    ViewScreen <|.. PlaySongScreen
+    ViewScreen <|.. ListUsersScreen
+    SpotifumView --> ViewScreen
+}
+
+package "Controller" {
+    class SpotifumController {
+        - model: SpotifumModel
+
+        + SpotifumController(model: SpotifumModel)
+
+        + addUser(name: String, email: String, planName: String): void
+        + listAllUsers(): List<User>
+        + getUserByEmail(email: String): User
+        + searchUserByName(name: String): List<User>
+
+        + addAlbum(name: String, artist: String): void
+        + listAllAlbums(): List<Album>
+        + getAlbumByName(name: String): Album
+        + searchAlbumByName(name: String): List<Album>
+    }
+}
+
+package "Model" {
+    class SpotifumModel {
+
+        - storageStrategy: StorageStrategy
+        - users: List<User>
+        - albums: List<Album>
+        - publicPlaylists: List<Playlist>
+        - subscriptionPlans: List<SubscriptionPlan>
+
+        + SpotifumModel(storageStrategy: StorageStrategy)
+
+        + setStorageStrategy(storageStrategy: StorageStrategy): void
+        + loadData(): void
+        + saveData(): void
+
+        + addUser(u: User): void
+        + getUsers(): List<User>
+        + getUserByEmail(email: String): User
+
+        + addAlbum(a: Album): void
+        + getAlbums(): List<Album>
+        + getAlbumByName(name: String): Album
+
+        + addPublicPlaylist(p: Playlist): void
+        + getPublicPlaylists(): List<Playlist>
+
+        + addSubscriptionPlan(p: SubscriptionPlan): void
+        + getSubscriptionPlans(): List<SubscriptionPlan>
+        + getSubscriptionPlanByName(name: String): SubscriptionPlan
+    }
+
+    class User
+    class Album
+    class Playlist
+    class SubscriptionPlan
+
+    abstract class StorageStrategy {
+        + load(): void
+        + save(): void
+    }
+
+    class SingleFileStorageStrategy {
+        + load(): void
+        + save(): void
+    }
+
+    class MultipleFileStorageStrategy {
+        + load(): void
+        + save(): void
+    }
+
+    StorageStrategy <|-- SingleFileStorageStrategy
+    StorageStrategy <|-- MultipleFileStorageStrategy
+}
+
+' RELATIONSHIPS
+SpotifumApp --> SpotifumView
+SpotifumView --> SpotifumController
+SpotifumView --> ViewScreen
+SpotifumController --> SpotifumModel
+SpotifumModel --> StorageStrategy
+SpotifumModel --> User
+SpotifumModel --> Album
+SpotifumModel --> Playlist
+SpotifumModel --> SubscriptionPlan
+
+@enduml

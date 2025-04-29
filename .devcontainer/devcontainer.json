@@ -13,7 +13,19 @@
 			"version": "none",
 			"installMaven": "true"
 		}
-	}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"redhat.java",
+				"vscjava.vscode-java-pack",
+				"vscjava.vscode-java-test",
+				"vscjava.vscode-maven",
+				"jebbs.plantuml"
+			]
+		}
+	},
+	"postCreateCommand": "apt-get update && apt-get install -y graphviz",
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -25,7 +37,7 @@
 	// "customizations": {},
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	 "remoteUser": "root"
 }
 
   
