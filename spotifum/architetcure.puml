@@ -1,0 +1,266 @@
+@startuml
+' ==============================
+'title: UML - SpotifUM (Completo)
+'title MVC Architecture - SpotifUM with Full Entities and Persistence
+' ==============================
+
+package "App" {
+    class SpotifumApp {
+        + main(args: String[]): void
+    }
+}
+
+package "View" {
+    interface ViewScreen {
+        + run(): void
+    }
+
+    class SpotifumView {
+        - controller: SpotifumController
+        - currentScreen: ViewScreen
+
+        + SpotifumView(controller: SpotifumController)
+        + run(): void
+        + setScreen(screen: ViewScreen): void
+    }
+
+    ' Menus e criação
+    class MainMenuScreen implements ViewScreen
+    class CreateUserScreen implements ViewScreen
+    class CreateAlbumScreen implements ViewScreen
+    class CreatePlaylistScreen implements ViewScreen
+    class CreateSubscriptionPlanScreen implements ViewScreen
+
+    ' Reprodução e conteúdo
+    class PlaySongScreen implements ViewScreen
+    class UserLibraryScreen implements ViewScreen
+    class PublicPlaylistsScreen implements ViewScreen
+
+    ' Estatísticas e sistema
+    class ListUsersScreen implements ViewScreen
+    class StatisticsScreen implements ViewScreen
+    class SaveLoadScreen implements ViewScreen
+
+    ' Geração avançada de playlists
+    class FavoritePlaylistScreen implements ViewScreen
+    class GenerateCustomPlaylistScreen implements ViewScreen
+}
+
+
+package "Controller" {
+class SpotifumController {
+    - model: SpotifumModel
+
+    + SpotifumController(model: SpotifumModel)
+
+    ' Utilizadores
+    + addUser(name: String, email: String, planName: String): void
+    + listAllUsers(): List<User>
+    + getUserByEmail(email: String): User
+    + searchUserByName(name: String): List<User>
+
+    ' Álbuns e Músicas
+    + addAlbum(name: String, artist: String): void
+    + listAllAlbums(): List<Album>
+    + getAlbumByName(name: String): Album
+    + addSongToAlbum(albumName: String, song: Song): void
+
+    ' Playlists
+    + createRandomPlaylistForUser(user: User, name: String, size: int): void
+    + createOrderedPlaylistForUser(user: User, name: String, songs: List<Song>): void
+    + generateFavoritePlaylist(user: User): Playlist
+    + generatePlaylistByGenreAndDuration(user: User, genre: String, maxDuration: int): Playlist
+    + generateExplicitPlaylist(user: User): Playlist
+    + listPublicPlaylists(): List<Playlist>
+    + makePlaylistPublic(user: User, playlist: Playlist): void
+
+    ' Estatísticas
+    + getStatistics(): SystemStatistics
+
+    ' Persistência
+    + saveState(): void
+    + loadState(): void
+
+    ' Reproduzir
+    + playSong(user: User, song: Song): void
+
+    ' Planos de Subscrição
+    + addSubscriptionPlan(plan: SubscriptionPlan): void
+    + listSubscriptionPlans(): List<SubscriptionPlan>
+    + getSubscriptionPlanByName(name: String): SubscriptionPlan
+}
+}
+
+package "Model" {
+    class SpotifumModel {
+        - storageStrategy: StorageStrategy
+        - songPlayer: SongPlayer
+        - users: List<User>
+        - albums: List<Album>
+        - publicPlaylists: List<Playlist>
+        - subscriptionPlans: List<SubscriptionPlan>
+        - playHistory: List<PlayEvent>
+
+        + SpotifumModel(storageStrategy: StorageStrategy)
+
+        + setStorageStrategy(storageStrategy: StorageStrategy): void
+        + loadData(): void
+        + saveData(): void
+
+        + addUser(u: User): void
+        + getUsers(): List<User>
+        + getUserByEmail(email: String): User
+
+        + addAlbum(a: Album): void
+        + getAlbums(): List<Album>
+        + getAlbumByName(name: String): Album
+
+        + addPublicPlaylist(p: Playlist): void
+        + getPublicPlaylists(): List<Playlist>
+
+        + addSubscriptionPlan(p: SubscriptionPlan): void
+        + getSubscriptionPlans(): List<SubscriptionPlan>
+        + getSubscriptionPlanByName(name: String): SubscriptionPlan
+
+        + getStatistics(): SystemStatistics
+        + recordPlay(user: User, song: Song): void
+    }
+
+    class SystemStatistics {
+        + getMostPlayedSong(): Song
+        + getMostListenedArtist(): String
+        + getTopUserByPlays(): User
+        + getTopUserByPoints(): User
+        + getMostPlayedGenre(): String
+        + getPublicPlaylistCount(): int
+        + getUserWithMostPlaylists(): User
+    }
+
+    class PlayEvent {
+        - user: User
+        - song: Song
+        - timestamp: Date
+    }
+
+    class Album {
+        - name: String
+        - artist: String
+        - releaseDate: Date
+        - songs: List<Song>
+
+        + addSong(song: Song): void
+        + getSongs(): List<Song>
+    }
+
+    interface Streamable {
+        + getStream(): String
+    }
+
+    class Song implements Streamable {
+        - name: String
+        - artist: String
+        - publisher: String
+        - lyrics: String
+        - music: List<String>
+        - genre: String
+        - duration: int
+        - playCount: int
+
+        + incrementPlayCount(): void
+        + getStream(): String
+    }
+
+    abstract class SongDecorator implements Streamable {
+        - decoratedSong: Streamable
+        + SongDecorator(decoratedSong: Streamable)
+        + getStream(): String
+    }
+
+    class ExplicitSongDecorator extends SongDecorator {}
+    class MultimediaSongDecorator extends SongDecorator {}
+
+    abstract class Playlist {
+        + getSongs(): List<Song>
+        + play(): void
+        + hasNext(): boolean
+        + hasPrevious(): boolean
+        + next(): Song
+        + previous(): Song
+        + shuffle(): void
+    }
+
+    class RandomPlaylist extends Playlist {
+        + addRandom(albums: List<Album>, size: int): void
+    }
+
+    class OrderedPlaylist extends Playlist {
+        - isShuffle: boolean
+    }
+
+    class FavoritePlaylist extends Playlist {
+        + generate(user: User): void
+    }
+
+    class TimeLimitedPlaylist extends Playlist {
+        - maxDuration: int
+        + generate(albums: List<Album>, genre: String, maxDuration: int): void
+    }
+
+    abstract class SubscriptionPlan {
+        + getName(): String
+        + canCreatePlaylist(): boolean
+        + canAccessFavorites(): boolean
+        + canPlaySpecificSong(): boolean
+        + getMaxRandomPlaylists(): int
+        + getMaxNonRandomPlaylists(): int
+        + getPointsPerSong(currentPoints: double): double
+    }
+
+    class FreePlan extends SubscriptionPlan {}
+    class PremiumBasePlan extends SubscriptionPlan {}
+    class PremiumTopPlan extends PremiumBasePlan {}
+
+    abstract class SongPlayer {
+        - currentSong: Song
+        + play(song: Song): void
+        + pause(): void
+        + stop(): void
+    }
+
+    class TextPlayer extends SongPlayer {}
+
+    class User {
+        - name: String
+        - email: String
+        - address: String
+        - points: double
+        - subscription: SubscriptionPlan
+        - library: List<Album>
+        - playlists: List<Playlist>
+        - songPlayCount: Map<Song, Integer>
+
+        + createRandomPlaylist(name: String, size: int): Playlist
+        + createOrderedPlaylist(name: String, songs: List<Song>): Playlist
+        + addPoints(amount: double): void
+        + play(song: Song): void
+    }
+}
+
+' RELATIONSHIPS
+SpotifumApp --> SpotifumView
+SpotifumView --> SpotifumController
+SpotifumView --> ViewScreen
+SpotifumController --> SpotifumModel
+SpotifumModel --> StorageStrategy
+SpotifumModel --> User
+SpotifumModel --> Album
+SpotifumModel --> SubscriptionPlan
+SpotifumModel --> Playlist
+SpotifumModel --> PlayEvent
+SpotifumModel --> SystemStatistics
+Album *-- Song
+SongPlayer o-- Song
+SongDecorator --> Streamable
+User --> Song : play history
+
+@enduml
