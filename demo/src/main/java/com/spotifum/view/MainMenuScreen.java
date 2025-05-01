@@ -1,3 +1,4 @@
+package com.spotifum.view;
 public class MainMenuScreen implements ViewScreen {
 
     private SpotifumView view;

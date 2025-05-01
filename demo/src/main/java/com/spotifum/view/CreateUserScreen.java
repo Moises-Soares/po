@@ -1,3 +1,4 @@
+package com.spotifum.view;
 public class CreateUserScreen implements ViewScreen {
 
     private SpotifumView view;

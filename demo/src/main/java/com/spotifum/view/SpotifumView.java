@@ -1,3 +1,4 @@
+package com.spotifum.view;
 public class SpotifumView {
     private ViewScreen currentScreen;
 

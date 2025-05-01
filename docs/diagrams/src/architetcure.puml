@@ -31,6 +31,7 @@ package "View" {
 
 package "Controller" {
     class SpotifumController {
+
         - model: SpotifumModel
 
         + SpotifumController(model: SpotifumModel)
@@ -44,6 +45,10 @@ package "Controller" {
         + listAllAlbums(): List<Album>
         + getAlbumByName(name: String): Album
         + searchAlbumByName(name: String): List<Album>
+
+        + createRandomPlaylistForUSer(user: User, name: String, size: int): void
+        + createOrderedPlaylistForUser(user: User, name: String, songs: List<Song>): void
+
     }
 }
 
@@ -54,6 +59,7 @@ package "Model" {
     class SpotifumModel {
 
         - storageStrategy: StorageStrategy
+        - songPlayer: SongPlayer
         - users: List<User>
         - albums: List<Album>
         - publicPlaylists: List<Playlist>
@@ -147,15 +153,76 @@ package "Model" {
     }
 
     
-    class Playlist {
-        - songs: List<Song>
-        + getSongs(): List<Song>
-        + play(): void
+' Interface comum para Playlists
+abstract class  Playlist {
+    # getSongs(): List<Song>
+    + play(): void
+    + hasNext(): boolean
+    + hasPrevious(): boolean
+    + next(): Song
+    + previous(): Song
+    + shuffle(): void
+}
 
-        + addRandom(albuns: List<Album>, size: int): void
-    }
+class RandomPlaylist extends Playlist {
+    + addRandom(albums: List<Album>, size: int): void
+}
 
-    class SubscriptionPlan
+class OrderedPlaylist extends Playlist {
+    - isShuffle: boolean
+}
+
+class FavoritePlaylist extends Playlist {
+    + generate(user: User): void
+}
+
+class TimeLimitedPlaylist extends Playlist {
+    - maxDuration: int
+    + generate(albums: List<Album>, maxDuration: int): void
+}
+
+
+ ' Interface para tipos de planos
+abstract class SubscriptionPlan {
+    + getName(): String
+    + canCreatePlaylist(): boolean
+    + canAccessFavorites(): boolean
+    + canPlaySpecificSong(): boolean
+    + getMaxRandomPlaylists(): int
+    + getMaxNonRandomPlaylists(): int
+    + getPointsPerSong(currentPoints: double): double
+}
+
+' Plano Free
+class FreePlan extends SubscriptionPlan {
+    + getName(): String
+    + canCreatePlaylist(): boolean
+    + canAccessFavorites(): boolean
+    + canPlaySpecificSong(): boolean
+    + getMaxRandomPlaylists(): int
+    + getMaxNonRandomPlaylists(): int
+    + getPointsPerSong(currentPoints: double): double
+}
+
+' Plano Premium Base
+class PremiumBasePlan extends SubscriptionPlan {
+    + getName(): String
+    + canCreatePlaylist(): boolean
+    + canAccessFavorites(): boolean
+    + canPlaySpecificSong(): boolean
+    + getMaxRandomPlaylists(): int
+    + getMaxNonRandomPlaylists(): int
+    + getPointsPerSong(currentPoints: double): double
+}
+
+' Plano Premium Top (extende o Base)
+class PremiumTopPlan extends PremiumBasePlan {
+    + canAccessFavorites(): boolean
+    + getMaxRandomPlaylists(): int
+    + getMaxNonRandomPlaylists(): int
+    + getPointsPerSong(currentPoints: double): double
+}
+
 
 
     abstract class SongPlayer {
@@ -187,11 +254,10 @@ package "Model" {
         - playlists: List<Playlist>
         - songPlayCount: Map<Song, Integer>
 
-        + playSong(song: Song, songPl): void
-        + createPlaylist(name: String): OrderedPlaylist 
-        + getPoints(): double
-        + addAlbum(album: Album): void 
-        + addPlaylist(playlist: Playlist): void 
+        + createRandomPlaylist(name: String, size: int): Playlist
+        + createOrderedPlaylist(name: String, songs: List<Song>): Playlist
+
+        
     }
 
    

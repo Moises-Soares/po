@@ -1,4 +1,4 @@
-package com.example;
+package com.spotifum;
 
 /**
  * Hello world!
