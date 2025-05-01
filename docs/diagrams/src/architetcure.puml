@@ -21,20 +21,12 @@ package "View" {
         + setScreen(screen: ViewScreen): void
     }
 
-    class MainMenuScreen
-    class CreateUserScreen
-    class CreateAlbumScreen
-    class CreatePlaylistScreen
-    class PlaySongScreen
-    class ListUsersScreen
-
-    ViewScreen <|.. MainMenuScreen
-    ViewScreen <|.. CreateUserScreen
-    ViewScreen <|.. CreateAlbumScreen
-    ViewScreen <|.. CreatePlaylistScreen
-    ViewScreen <|.. PlaySongScreen
-    ViewScreen <|.. ListUsersScreen
-    SpotifumView --> ViewScreen
+    class MainMenuScreen implements ViewScreen
+    class CreateUserScreen implements ViewScreen
+    class CreateAlbumScreen implements ViewScreen
+    class CreatePlaylistScreen implements ViewScreen
+    class PlaySongScreen implements ViewScreen
+    class ListUsersScreen implements ViewScreen
 }
 
 package "Controller" {
@@ -56,6 +48,9 @@ package "Controller" {
 }
 
 package "Model" {
+
+    ' Represents the main model of the application
+    ' It contains the data and the logic to manipulate it
     class SpotifumModel {
 
         - storageStrategy: StorageStrategy
@@ -86,39 +81,143 @@ package "Model" {
         + getSubscriptionPlanByName(name: String): SubscriptionPlan
     }
 
-    class User
-    class Album
-    class Playlist
+
+    ' Abstract class for storage strategies
+    abstract class StorageStrategy {
+        + loadData(): void
+        + saveData(): void
+    }
+
+    ' This strategy is used when the data is stored in a single file
+    class SingleFileStorageStrategy extends StorageStrategy {
+        + loadData(): void
+        + saveData(): void
+    }
+
+    ' This strategy is used when the data is stored in multiple files
+    class MultipleFileStorageStrategy extends StorageStrategy {
+        + loadData(): void
+        + saveData(): void
+    }
+
+    class Album {
+            - name: String
+            - artist: String
+            - releaseDate: Date
+            - songs: List<Song>
+
+            + addSong(song: Song): void
+            + getSongs(): List<Song>
+    }
+
+
+    interface Streamable {
+        + getStream(): String
+    }
+
+    class Song implements Streamable {
+        - name: String
+        - artist: String
+        - publisher: String
+        - lyrics: String
+        - music: List<String>
+        - genre: String
+        - duration: int
+        - playCount: int
+
+        + incrementPlayCount(): void
+        + getStream(): String
+    }
+
+    
+    abstract class SongDecorator implements Streamable {
+        - decoratedSong: Streamable
+        + SongDecorator(decoratedSong: Streamable)
+        + getStream(): String
+    }
+
+    class ExplicitSongDecorator extends SongDecorator {
+        + ExplicitSongDecorator(song: Streamable)
+        + getStream(): String
+    }
+
+    class MultimediaSongDecorator extends SongDecorator {
+        + MultimediaSongDecorator(song: Streamable)
+        + getStream(): String
+    }
+
+    
+    class Playlist {
+        - songs: List<Song>
+        + getSongs(): List<Song>
+        + play(): void
+
+        + addRandom(albuns: List<Album>, size: int): void
+    }
+
     class SubscriptionPlan
 
-    abstract class StorageStrategy {
-        + load(): void
-        + save(): void
+
+    abstract class SongPlayer {
+        - currentSong: Song
+        + play(song: Song): void
+        + pause(): void
+        + stop(): void
     }
 
-    class SingleFileStorageStrategy {
-        + load(): void
-        + save(): void
+    class TextPlayer extends SongPlayer {
+        + play(song: Song): void
+        + pause(): void
+        + stop(): void
     }
 
-    class MultipleFileStorageStrategy {
-        + load(): void
-        + save(): void
+ 
+
+
+
+  ' Represents a user of the system
+    class User {
+        - name: String
+        - email: String
+        - address: String
+        - points: double
+        - subscription: SubscriptionPlan
+
+        - library: List<Album>
+        - playlists: List<Playlist>
+        - songPlayCount: Map<Song, Integer>
+
+        + playSong(song: Song, songPl): void
+        + createPlaylist(name: String): OrderedPlaylist 
+        + getPoints(): double
+        + addAlbum(album: Album): void 
+        + addPlaylist(playlist: Playlist): void 
     }
 
-    StorageStrategy <|-- SingleFileStorageStrategy
-    StorageStrategy <|-- MultipleFileStorageStrategy
+   
+
+   
+
+
+
+    
+
+    
 }
 
 ' RELATIONSHIPS
-SpotifumApp --> SpotifumView
-SpotifumView --> SpotifumController
-SpotifumView --> ViewScreen
-SpotifumController --> SpotifumModel
-SpotifumModel --> StorageStrategy
-SpotifumModel --> User
-SpotifumModel --> Album
-SpotifumModel --> Playlist
-SpotifumModel --> SubscriptionPlan
+SpotifumApp --> SpotifumView : runs
+SpotifumView --> SpotifumController : uses
+SpotifumView --> ViewScreen :  sets screen
+SpotifumController --> SpotifumModel : manages
+SpotifumModel --> StorageStrategy : delegates storage logic to
+SpotifumModel --> User : stores
+SpotifumModel --> Album : stores
+SpotifumModel --> SubscriptionPlan : stores
+SpotifumModel --> Playlist : stores
+Album *-- Song
+SongPlayer o-- Song : currentSong 
+SongDecorator --> Streamable : decorates
+User --> Song : play count history
 
 @enduml
