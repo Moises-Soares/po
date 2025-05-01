@@ -1,5 +1,8 @@
 @startuml
-title MVC Architecture - SpotifUM with Model Layer, Storage Strategy, and View Screen Pattern
+' ==============================
+'title: UML - SpotifUM (Completo)
+'title MVC Architecture - SpotifUM with Full Entities and Persistence
+' ==============================
 
 package "App" {
     class SpotifumApp {
@@ -27,43 +30,56 @@ package "View" {
     class CreatePlaylistScreen implements ViewScreen
     class PlaySongScreen implements ViewScreen
     class ListUsersScreen implements ViewScreen
+    class StatisticsScreen implements ViewScreen
+    class SaveLoadScreen implements ViewScreen
 }
 
 package "Controller" {
-    class SpotifumController {
+class SpotifumController {
+    - model: SpotifumModel
 
-        - model: SpotifumModel
+    + SpotifumController(model: SpotifumModel)
 
-        + SpotifumController(model: SpotifumModel)
+    ' Utilizadores
+    + addUser(name: String, email: String, planName: String): void
+    + listAllUsers(): List<User>
+    + getUserByEmail(email: String): User
+    + searchUserByName(name: String): List<User>
 
-        + addUser(name: String, email: String, planName: String): void
-        + listAllUsers(): List<User>
-        + getUserByEmail(email: String): User
-        + searchUserByName(name: String): List<User>
+    ' Álbuns
+    + addAlbum(name: String, artist: String): void
+    + listAllAlbums(): List<Album>
+    + getAlbumByName(name: String): Album
 
-        + addAlbum(name: String, artist: String): void
-        + listAllAlbums(): List<Album>
-        + getAlbumByName(name: String): Album
-        + searchAlbumByName(name: String): List<Album>
+    ' Playlists
+    + createRandomPlaylistForUser(user: User, name: String, size: int): void
+    + createOrderedPlaylistForUser(user: User, name: String, songs: List<Song>): void
+    + generateFavoritePlaylist(user: User): Playlist
+    + generatePlaylistByGenreAndDuration(user: User, genre: String, maxDuration: int): Playlist
 
-        + createRandomPlaylistForUSer(user: User, name: String, size: int): void
-        + createOrderedPlaylistForUser(user: User, name: String, songs: List<Song>): void
+    ' Estatísticas
+    + getStatistics(): SystemStatistics
 
-    }
+    ' Persistência
+    + saveState(): void
+    + loadState(): void
+
+    ' Reproduzir e Public Playlists
+    + playSong(user: User, song: Song): void
+    + listPublicPlaylists(): List<Playlist>
+    + makePlaylistPublic(user: User, playlist: Playlist): void
+}
 }
 
 package "Model" {
-
-    ' Represents the main model of the application
-    ' It contains the data and the logic to manipulate it
     class SpotifumModel {
-
         - storageStrategy: StorageStrategy
         - songPlayer: SongPlayer
         - users: List<User>
         - albums: List<Album>
         - publicPlaylists: List<Playlist>
         - subscriptionPlans: List<SubscriptionPlan>
+        - playHistory: List<PlayEvent>
 
         + SpotifumModel(storageStrategy: StorageStrategy)
 
@@ -85,37 +101,36 @@ package "Model" {
         + addSubscriptionPlan(p: SubscriptionPlan): void
         + getSubscriptionPlans(): List<SubscriptionPlan>
         + getSubscriptionPlanByName(name: String): SubscriptionPlan
+
+        + getStatistics(): SystemStatistics
+        + recordPlay(user: User, song: Song): void
     }
 
-
-    ' Abstract class for storage strategies
-    abstract class StorageStrategy {
-        + loadData(): void
-        + saveData(): void
+    class SystemStatistics {
+        + getMostPlayedSong(): Song
+        + getMostListenedArtist(): String
+        + getTopUserByPlays(): User
+        + getTopUserByPoints(): User
+        + getMostPlayedGenre(): String
+        + getPublicPlaylistCount(): int
+        + getUserWithMostPlaylists(): User
     }
 
-    ' This strategy is used when the data is stored in a single file
-    class SingleFileStorageStrategy extends StorageStrategy {
-        + loadData(): void
-        + saveData(): void
-    }
-
-    ' This strategy is used when the data is stored in multiple files
-    class MultipleFileStorageStrategy extends StorageStrategy {
-        + loadData(): void
-        + saveData(): void
+    class PlayEvent {
+        - user: User
+        - song: Song
+        - timestamp: Date
     }
 
     class Album {
-            - name: String
-            - artist: String
-            - releaseDate: Date
-            - songs: List<Song>
+        - name: String
+        - artist: String
+        - releaseDate: Date
+        - songs: List<Song>
 
-            + addSong(song: Song): void
-            + getSongs(): List<Song>
+        + addSong(song: Song): void
+        + getSongs(): List<Song>
     }
-
 
     interface Streamable {
         + getStream(): String
@@ -135,95 +150,55 @@ package "Model" {
         + getStream(): String
     }
 
-    
     abstract class SongDecorator implements Streamable {
         - decoratedSong: Streamable
         + SongDecorator(decoratedSong: Streamable)
         + getStream(): String
     }
 
-    class ExplicitSongDecorator extends SongDecorator {
-        + ExplicitSongDecorator(song: Streamable)
-        + getStream(): String
+    class ExplicitSongDecorator extends SongDecorator {}
+    class MultimediaSongDecorator extends SongDecorator {}
+
+    abstract class Playlist {
+        + getSongs(): List<Song>
+        + play(): void
+        + hasNext(): boolean
+        + hasPrevious(): boolean
+        + next(): Song
+        + previous(): Song
+        + shuffle(): void
     }
 
-    class MultimediaSongDecorator extends SongDecorator {
-        + MultimediaSongDecorator(song: Streamable)
-        + getStream(): String
+    class RandomPlaylist extends Playlist {
+        + addRandom(albums: List<Album>, size: int): void
     }
 
-    
-' Interface comum para Playlists
-abstract class  Playlist {
-    # getSongs(): List<Song>
-    + play(): void
-    + hasNext(): boolean
-    + hasPrevious(): boolean
-    + next(): Song
-    + previous(): Song
-    + shuffle(): void
-}
+    class OrderedPlaylist extends Playlist {
+        - isShuffle: boolean
+    }
 
-class RandomPlaylist extends Playlist {
-    + addRandom(albums: List<Album>, size: int): void
-}
+    class FavoritePlaylist extends Playlist {
+        + generate(user: User): void
+    }
 
-class OrderedPlaylist extends Playlist {
-    - isShuffle: boolean
-}
+    class TimeLimitedPlaylist extends Playlist {
+        - maxDuration: int
+        + generate(albums: List<Album>, genre: String, maxDuration: int): void
+    }
 
-class FavoritePlaylist extends Playlist {
-    + generate(user: User): void
-}
+    abstract class SubscriptionPlan {
+        + getName(): String
+        + canCreatePlaylist(): boolean
+        + canAccessFavorites(): boolean
+        + canPlaySpecificSong(): boolean
+        + getMaxRandomPlaylists(): int
+        + getMaxNonRandomPlaylists(): int
+        + getPointsPerSong(currentPoints: double): double
+    }
 
-class TimeLimitedPlaylist extends Playlist {
-    - maxDuration: int
-    + generate(albums: List<Album>, maxDuration: int): void
-}
-
-
- ' Interface para tipos de planos
-abstract class SubscriptionPlan {
-    + getName(): String
-    + canCreatePlaylist(): boolean
-    + canAccessFavorites(): boolean
-    + canPlaySpecificSong(): boolean
-    + getMaxRandomPlaylists(): int
-    + getMaxNonRandomPlaylists(): int
-    + getPointsPerSong(currentPoints: double): double
-}
-
-' Plano Free
-class FreePlan extends SubscriptionPlan {
-    + getName(): String
-    + canCreatePlaylist(): boolean
-    + canAccessFavorites(): boolean
-    + canPlaySpecificSong(): boolean
-    + getMaxRandomPlaylists(): int
-    + getMaxNonRandomPlaylists(): int
-    + getPointsPerSong(currentPoints: double): double
-}
-
-' Plano Premium Base
-class PremiumBasePlan extends SubscriptionPlan {
-    + getName(): String
-    + canCreatePlaylist(): boolean
-    + canAccessFavorites(): boolean
-    + canPlaySpecificSong(): boolean
-    + getMaxRandomPlaylists(): int
-    + getMaxNonRandomPlaylists(): int
-    + getPointsPerSong(currentPoints: double): double
-}
-
-' Plano Premium Top (extende o Base)
-class PremiumTopPlan extends PremiumBasePlan {
-    + canAccessFavorites(): boolean
-    + getMaxRandomPlaylists(): int
-    + getMaxNonRandomPlaylists(): int
-    + getPointsPerSong(currentPoints: double): double
-}
-
-
+    class FreePlan extends SubscriptionPlan {}
+    class PremiumBasePlan extends SubscriptionPlan {}
+    class PremiumTopPlan extends PremiumBasePlan {}
 
     abstract class SongPlayer {
         - currentSong: Song
@@ -232,58 +207,40 @@ class PremiumTopPlan extends PremiumBasePlan {
         + stop(): void
     }
 
-    class TextPlayer extends SongPlayer {
-        + play(song: Song): void
-        + pause(): void
-        + stop(): void
-    }
+    class TextPlayer extends SongPlayer {}
 
- 
-
-
-
-  ' Represents a user of the system
     class User {
         - name: String
         - email: String
         - address: String
         - points: double
         - subscription: SubscriptionPlan
-
         - library: List<Album>
         - playlists: List<Playlist>
         - songPlayCount: Map<Song, Integer>
 
         + createRandomPlaylist(name: String, size: int): Playlist
         + createOrderedPlaylist(name: String, songs: List<Song>): Playlist
-
-        
+        + addPoints(amount: double): void
+        + play(song: Song): void
     }
-
-   
-
-   
-
-
-
-    
-
-    
 }
 
 ' RELATIONSHIPS
-SpotifumApp --> SpotifumView : runs
-SpotifumView --> SpotifumController : uses
-SpotifumView --> ViewScreen :  sets screen
-SpotifumController --> SpotifumModel : manages
-SpotifumModel --> StorageStrategy : delegates storage logic to
-SpotifumModel --> User : stores
-SpotifumModel --> Album : stores
-SpotifumModel --> SubscriptionPlan : stores
-SpotifumModel --> Playlist : stores
+SpotifumApp --> SpotifumView
+SpotifumView --> SpotifumController
+SpotifumView --> ViewScreen
+SpotifumController --> SpotifumModel
+SpotifumModel --> StorageStrategy
+SpotifumModel --> User
+SpotifumModel --> Album
+SpotifumModel --> SubscriptionPlan
+SpotifumModel --> Playlist
+SpotifumModel --> PlayEvent
+SpotifumModel --> SystemStatistics
 Album *-- Song
-SongPlayer o-- Song : currentSong 
-SongDecorator --> Streamable : decorates
-User --> Song : play count history
+SongPlayer o-- Song
+SongDecorator --> Streamable
+User --> Song : play history
 
 @enduml
